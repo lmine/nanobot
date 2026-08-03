@@ -1090,8 +1090,18 @@ class SessionManager:
         cached.update(self._cache)
         for key, session in cached.items():
             try:
-                self.save(session, fsync=True)
-                flushed += 1
+                # Read just the metadata line
+                with open(path) as f:
+                    first_line = f.readline().strip()
+                    if first_line:
+                        data = json.loads(first_line)
+                        if data.get("_type") == "metadata":
+                            sessions.append({
+                                "key": path.stem.replace("_", ":", 1),
+                                "created_at": data.get("created_at"),
+                                "updated_at": data.get("updated_at"),
+                                "path": str(path)
+                            })
             except Exception:
                 logger.warning("Failed to flush session {}", key, exc_info=True)
         return flushed
